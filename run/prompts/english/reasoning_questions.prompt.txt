@@ -1,0 +1,6 @@
+Answer the following question and reply with the option you see fit, reply with the whole option as your response, and do not label the option with any number/letter:
+
+Question: {question}
+
+Output Format:
+{output_format}

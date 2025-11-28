@@ -1,0 +1,6 @@
+Answer the following question as precisely as you can, your answer should be a named entity, your response should only contain the answer and should not exceed 3 words.:
+
+Question: {question}
+
+Output Format:
+{output_format}

@@ -1,0 +1,6 @@
+Answer the following mathematical questions, your response should only contain the answer.
+
+Question: {question}
+
+Output Format:
+{output_format}

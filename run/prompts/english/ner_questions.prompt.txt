@@ -1,0 +1,29 @@
+Process the given sentence and provide a list of NER tags for each word. The valid tags are:
+
+O: Outside (no entity)
+B-PER: Beginning of a Person entity
+I-PER: Inside a Person entity
+B-ORG: Beginning of an Organization entity
+I-ORG: Inside an Organization entity
+B-LOC: Beginning of a Location entity
+I-LOC: Inside a Location entity
+
+The output must be the list of the words in the sentence with their tags next to the word. Assign NER tags for every word, NOT for every token.
+
+Example:
+Sentence: "Sundar Pichai of Google Inc. lives in New York."
+Output:
+Sundar B-PER
+Pichai I-PER
+of O
+Google B-ORG
+Inc. I-ORG
+lives O
+in O
+New B-LOC
+York I-LOC
+. O
+
+Now process this sentence:
+
+Sentence: {question}

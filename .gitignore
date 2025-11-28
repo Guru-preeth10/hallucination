@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+.ipynb_checkpoints
+*.ipynb~
+.notebooks_cache/
+
+# Environment
+.env
+.venv/
+env/
+venv/
+*.conda
+*.virtualenv
+
+# Logs & Debug
+*.log
+*.out
+*.err
+
+# PyTorch / HF / Datasets Cache
+.cache/
+cache/
+transformers_cache/
+*.pt
+*.pth
+
+# Project
+**/data/*
+!**/data/.gitkeep
+**/results/*
+!**/results/.gitkeep
+**/fasttext/**
+!**/fasttext/.gitkeep
+
+# OS related
+.DS_Store
+*.DS_Store
+Thumbs.db
+

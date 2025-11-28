@@ -1,0 +1,6 @@
+Answer the following question. If you think the question is semantically incorrect then your answer should be "Invalid". Do not try to answer the question if you think it is semantically incorrect.:
+
+Question: {question}
+
+Output Format:
+{output_format}

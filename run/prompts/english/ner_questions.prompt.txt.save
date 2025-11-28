@@ -1,0 +1,22 @@
+Tokenize the following sentence and provide a list of NER tags (numbers) for each token,
+using this mapping:
+0 = Beginning of Location
+1 = Beginning of Person
+2 = Beginning of Person
+3 = Inside Location
+4 = Inside Organization
+5 = Inside Person
+6 = Outside (no entity)
+
+The output must be a space-separated list of numbers, one for each token, in the same order.
+
+Example:
+Sentence: "Barack Obama was born in Hawaii."
+Tokens: ["Barack", "Obama", "was", "born", "in", "Hawaii", "."]
+NER tags: [2 5 6 6 6 0 6]
+
+Now process this sentence:
+Sentence: {question}
+
+Output Format:
+{output_format}

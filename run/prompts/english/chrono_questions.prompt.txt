@@ -1,0 +1,6 @@
+Order in the following events chronologically. Your response should only contain the events as named in the question itself, separated by commas.:
+
+Question: {question}
+
+Output Format:
+{output_format}

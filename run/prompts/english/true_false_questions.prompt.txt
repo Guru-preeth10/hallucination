@@ -1,0 +1,7 @@
+Determine if the following statement is TRUE or FALSE.
+Reply ONLY with 'TRUE' or 'FALSE':
+
+Question: {question}
+
+Output Format:
+{output_format}

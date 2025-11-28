@@ -1,0 +1,7 @@
+Read the following text and provide a concise summary in 50 words.:
+
+Text: {question}
+
+Output Format:
+{output_format}
+
