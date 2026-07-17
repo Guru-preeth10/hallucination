@@ -1,0 +1,15 @@
+transformers
+accelerate
+bitsandbytes
+sentencepiece
+protobuf
+pandas
+openpyxl
+tqdm
+numpy
+scipy
+thefuzz[speedup]
+rouge-score
+sacrebleu
+indic-transliteration
+fasttext-wheel
