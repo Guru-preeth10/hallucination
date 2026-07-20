@@ -24,7 +24,7 @@ import json
 import re
 import time
 from pathlib import Path
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable, List, Optional
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
@@ -105,11 +105,9 @@ Preserve exactly:
 
 {answer_rule}
 
-Return ONLY valid JSON with these exact keys:
-{{
-  "question": "...",
-  "expected": "..."
-}}
+Return ONLY these two XML-style fields and nothing else:
+<question>...</question>
+<expected>...</expected>
 
 Category: {category}
 English question: {row["question"]}
@@ -127,14 +125,12 @@ English expected answer: {expected}
 
 def build_repair_messages(raw_text: str, target_language: str) -> List[Dict[str, str]]:
     prompt = f"""
-The following text was supposed to be a JSON translation result for {target_language},
+The following text was supposed to be a translation result for {target_language},
 but it may contain extra explanation, markdown, or malformed formatting.
 
-Extract and return ONLY valid JSON with exactly these keys:
-{{
-  "question": "...",
-  "expected": "..."
-}}
+Extract and return ONLY:
+<question>...</question>
+<expected>...</expected>
 
 Text:
 {raw_text}
@@ -143,7 +139,47 @@ Text:
     return [
         {
             "role": "system",
-            "content": "You are a JSON repair assistant. Return only valid JSON.",
+            "content": "You are a structured extraction assistant. Return only the requested tags.",
+        },
+        {"role": "user", "content": prompt},
+    ]
+
+
+def build_single_field_messages(
+    row: Dict,
+    target_language: str,
+    field_name: str,
+) -> List[Dict[str, str]]:
+    answer_rule = (
+        "If the category is true_false_questions and you are translating the expected field, "
+        "keep the answer exactly as \"True\" or \"False\" in English."
+    )
+
+    source_text = str(row["question"] if field_name == "question" else row["expected"])
+    prompt = f"""
+Translate the following {field_name} from English into {target_language}.
+
+Preserve exactly:
+- facts
+- dates
+- numbers
+- named entities
+- chronology/order
+- option structure if present
+
+{answer_rule}
+
+Return ONLY:
+<{field_name}>...</{field_name}>
+
+English {field_name}:
+{source_text}
+""".strip()
+
+    return [
+        {
+            "role": "system",
+            "content": "You are a careful benchmark translator. Return only the requested XML tag.",
         },
         {"role": "user", "content": prompt},
     ]
@@ -179,39 +215,30 @@ def generate_text(model, tokenizer, messages: List[Dict[str, str]], max_new_toke
     return tokenizer.decode(response_tokens, skip_special_tokens=True).strip()
 
 
-def _find_first_json_object(text: str) -> str:
-    decoder = json.JSONDecoder()
-    for start_idx, char in enumerate(text):
-        if char != "{":
-            continue
-        try:
-            _, end_idx = decoder.raw_decode(text[start_idx:])
-            return text[start_idx:start_idx + end_idx]
-        except json.JSONDecodeError:
-            continue
-    raise json.JSONDecodeError("No valid JSON object found", text, 0)
+def _extract_tag(text: str, tag: str) -> Optional[str]:
+    pattern = rf"<{tag}>\s*(.*?)\s*</{tag}>"
+    match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    return None
 
 
-def extract_json_object(text: str) -> Dict[str, str]:
+def extract_tag_payload(text: str) -> Dict[str, str]:
     text = text.strip()
 
-    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    fenced = re.search(r"```(?:xml|html|text)?\s*(.*?)\s*```", text, re.DOTALL)
     if fenced:
-        text = fenced.group(1)
+        text = fenced.group(1).strip()
 
-    if not text.startswith("{"):
-        match = re.search(r"(\{.*\})", text, re.DOTALL)
-        if match:
-            text = match.group(1)
+    question = _extract_tag(text, "question")
+    expected = _extract_tag(text, "expected")
 
-    text = _find_first_json_object(text)
+    if question is None or expected is None:
+        raise ValueError("Missing question or expected tag in translation output")
 
-    data = json.loads(text)
-    if "question" not in data or "expected" not in data:
-        raise ValueError("Missing question or expected in translation JSON")
     return {
-        "question": str(data["question"]).strip(),
-        "expected": str(data["expected"]).strip(),
+        "question": question,
+        "expected": expected,
     }
 
 
@@ -230,7 +257,7 @@ def generate_translation_payload(
     )
 
     try:
-        return extract_json_object(raw_text)
+        return extract_tag_payload(raw_text)
     except Exception:
         repair_text = generate_text(
             model=model,
@@ -238,7 +265,33 @@ def generate_translation_payload(
             messages=build_repair_messages(raw_text, target_language),
             max_new_tokens=max_new_tokens,
         )
-        return extract_json_object(repair_text)
+        try:
+            return extract_tag_payload(repair_text)
+        except Exception:
+            question_text = generate_text(
+                model=model,
+                tokenizer=tokenizer,
+                messages=build_single_field_messages(row, target_language, "question"),
+                max_new_tokens=max_new_tokens,
+            )
+            expected_text = generate_text(
+                model=model,
+                tokenizer=tokenizer,
+                messages=build_single_field_messages(row, target_language, "expected"),
+                max_new_tokens=max_new_tokens,
+            )
+
+            question = _extract_tag(question_text, "question")
+            expected = _extract_tag(expected_text, "expected")
+            if question is None or expected is None:
+                raise ValueError(
+                    "Unable to recover translation fields after structured and fallback prompts"
+                )
+
+            return {
+                "question": question,
+                "expected": expected,
+            }
 
 
 def build_target_unique_id(source_unique_id: str, suffix: str) -> str:
@@ -265,6 +318,7 @@ def translate_rows(
         existing_rows = load_rows(output_path)
         completed = {row["question_id"] for row in existing_rows}
 
+    failures_path = output_path.with_suffix(output_path.suffix + ".failures.jsonl")
     model, tokenizer = load_model_and_tokenizer(model_name, quantization)
     translated_rows = existing_rows[:]
 
@@ -277,13 +331,30 @@ def translate_rows(
             f"{row['category']} -> {target_language}",
             flush=True,
         )
-        payload = generate_translation_payload(
-            model=model,
-            tokenizer=tokenizer,
-            row=row,
-            target_language=target_language,
-            max_new_tokens=max_new_tokens,
-        )
+        try:
+            payload = generate_translation_payload(
+                model=model,
+                tokenizer=tokenizer,
+                row=row,
+                target_language=target_language,
+                max_new_tokens=max_new_tokens,
+            )
+        except Exception as exc:
+            failure_record = {
+                "question_id": row["question_id"],
+                "category": row["category"],
+                "language": target_language,
+                "error": str(exc),
+                "source_question": row["question"],
+                "source_expected": str(row["expected"]),
+            }
+            with open(failures_path, "a", encoding="utf-8") as handle:
+                handle.write(json.dumps(failure_record, ensure_ascii=False) + "\n")
+            print(
+                f"Skipping qid={row['question_id']} after translation failure: {exc}",
+                flush=True,
+            )
+            continue
 
         translated_row = dict(row)
         translated_row["language"] = target_language
