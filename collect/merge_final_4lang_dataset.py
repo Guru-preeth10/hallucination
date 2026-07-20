@@ -98,6 +98,11 @@ def parse_args() -> argparse.Namespace:
         default="dataset/final_4lang_seed/final_4lang_5000.jsonl",
         help="Merged final dataset JSONL path.",
     )
+    parser.add_argument(
+        "--allow-partial",
+        action="store_true",
+        help="Allow partial merge: drop groups missing any language instead of failing.",
+    )
     return parser.parse_args()
 
 
@@ -109,7 +114,29 @@ def main() -> None:
     rows.extend(load_rows(Path(args.tamil)))
 
     rows.sort(key=lambda row: (row["category"], row["question_id"], FINAL_LANGUAGE_ORDER.index(row["language"])))
-    grouped = validate_alignment(rows)
+
+    # Build a mapping of groups to language rows
+    temp = defaultdict(dict)
+    for row in rows:
+        key = (row["category"], row["question_id"])
+        temp[key][row["language"]] = row
+
+    if args.allow_partial:
+        # Keep only fully-complete groups that have all languages
+        grouped = {k: v for k, v in temp.items() if all(lang in v for lang in FINAL_LANGUAGE_ORDER)}
+        dropped = [k for k, v in temp.items() if not all(lang in v for lang in FINAL_LANGUAGE_ORDER)]
+        if dropped:
+            print(f"Dropping {len(dropped)} incomplete groups due to missing languages.")
+
+        # Rebuild rows to include only the kept groups, preserving language order
+        filtered_rows: List[Dict] = []
+        for key in sorted(grouped.keys(), key=lambda k: (k[0], k[1])):
+            language_rows = grouped[key]
+            for lang in FINAL_LANGUAGE_ORDER:
+                filtered_rows.append(language_rows[lang])
+        rows = filtered_rows
+    else:
+        grouped = validate_alignment(rows)
 
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
