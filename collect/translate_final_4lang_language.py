@@ -125,6 +125,30 @@ English expected answer: {expected}
     ]
 
 
+def build_repair_messages(raw_text: str, target_language: str) -> List[Dict[str, str]]:
+    prompt = f"""
+The following text was supposed to be a JSON translation result for {target_language},
+but it may contain extra explanation, markdown, or malformed formatting.
+
+Extract and return ONLY valid JSON with exactly these keys:
+{{
+  "question": "...",
+  "expected": "..."
+}}
+
+Text:
+{raw_text}
+""".strip()
+
+    return [
+        {
+            "role": "system",
+            "content": "You are a JSON repair assistant. Return only valid JSON.",
+        },
+        {"role": "user", "content": prompt},
+    ]
+
+
 def generate_text(model, tokenizer, messages: List[Dict[str, str]], max_new_tokens: int) -> str:
     if supports_chat_template(tokenizer):
         model_inputs = tokenizer.apply_chat_template(
@@ -155,6 +179,19 @@ def generate_text(model, tokenizer, messages: List[Dict[str, str]], max_new_toke
     return tokenizer.decode(response_tokens, skip_special_tokens=True).strip()
 
 
+def _find_first_json_object(text: str) -> str:
+    decoder = json.JSONDecoder()
+    for start_idx, char in enumerate(text):
+        if char != "{":
+            continue
+        try:
+            _, end_idx = decoder.raw_decode(text[start_idx:])
+            return text[start_idx:start_idx + end_idx]
+        except json.JSONDecodeError:
+            continue
+    raise json.JSONDecodeError("No valid JSON object found", text, 0)
+
+
 def extract_json_object(text: str) -> Dict[str, str]:
     text = text.strip()
 
@@ -167,6 +204,8 @@ def extract_json_object(text: str) -> Dict[str, str]:
         if match:
             text = match.group(1)
 
+    text = _find_first_json_object(text)
+
     data = json.loads(text)
     if "question" not in data or "expected" not in data:
         raise ValueError("Missing question or expected in translation JSON")
@@ -174,6 +213,32 @@ def extract_json_object(text: str) -> Dict[str, str]:
         "question": str(data["question"]).strip(),
         "expected": str(data["expected"]).strip(),
     }
+
+
+def generate_translation_payload(
+    model,
+    tokenizer,
+    row: Dict,
+    target_language: str,
+    max_new_tokens: int,
+) -> Dict[str, str]:
+    raw_text = generate_text(
+        model=model,
+        tokenizer=tokenizer,
+        messages=build_messages(row, target_language),
+        max_new_tokens=max_new_tokens,
+    )
+
+    try:
+        return extract_json_object(raw_text)
+    except Exception:
+        repair_text = generate_text(
+            model=model,
+            tokenizer=tokenizer,
+            messages=build_repair_messages(raw_text, target_language),
+            max_new_tokens=max_new_tokens,
+        )
+        return extract_json_object(repair_text)
 
 
 def build_target_unique_id(source_unique_id: str, suffix: str) -> str:
@@ -212,14 +277,13 @@ def translate_rows(
             f"{row['category']} -> {target_language}",
             flush=True,
         )
-        messages = build_messages(row, target_language)
-        raw_text = generate_text(
+        payload = generate_translation_payload(
             model=model,
             tokenizer=tokenizer,
-            messages=messages,
+            row=row,
+            target_language=target_language,
             max_new_tokens=max_new_tokens,
         )
-        payload = extract_json_object(raw_text)
 
         translated_row = dict(row)
         translated_row["language"] = target_language
