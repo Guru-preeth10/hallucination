@@ -278,6 +278,8 @@ class BaseEvaluator(ABC):
         "gujarati": "gu",
         "marathi": "mr",
         "odia": "or",
+        "kannada": "kn",
+        "tamil": "ta",
     }
     VALID_LANGUAGES = set(LANGUAGE_MAP.values())
 

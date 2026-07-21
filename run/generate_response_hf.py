@@ -35,7 +35,7 @@ DEFAULT_OUTPUT_DIR = Path("output")
 SYSTEM_PROMPT_PREFIX = "system"
 OUTPUT_FORMAT_PROMPT_PREFIX = "output_format"
 
-LANGUAGES = ["english", "gujarati", "hindi", "marathi", "odia"]
+LANGUAGES = ["english", "gujarati", "hindi", "marathi", "odia", "kannada", "tamil"]
 
 LANGUAGE_ID_MAP = {
     "english": 1,
@@ -43,6 +43,8 @@ LANGUAGE_ID_MAP = {
     "gujarati": 3,
     "marathi": 4,
     "odia": 5,
+    "kannada": 6,
+    "tamil": 7,
 }
 
 CATEGORY_ID_MAP = {
@@ -136,6 +138,20 @@ def read_prompt_templates(categories: Iterable[str]) -> Dict:
                     encoding="utf-8"
                 )
 
+    # Fill missing templates for Kannada/Tamil with English fallbacks
+    for language in LANGUAGES:
+        if language == "english":
+            continue
+        if not templates[language]["system"]:
+            templates[language]["system"] = templates["english"]["system"]
+        if not templates[language]["output"]:
+            templates[language]["output"] = templates["english"]["output"]
+        for category in categories:
+            if category not in templates[language]["user"]:
+                templates[language]["user"][category] = templates["english"]["user"].get(
+                    category, ""
+                )
+
     return templates
 
 
@@ -144,7 +160,10 @@ def choose_prompt_language(question_language: str, prompt_mode: str) -> str:
     if prompt_mode == "english":
         return "english"
     if normalized not in LANGUAGES:
-        raise ValueError(f"Unsupported language for native prompts: {question_language}")
+        print(
+            f"Warning: Unsupported native prompt language {question_language}. Falling back to English."
+        )
+        return "english"
     return normalized
 
 
