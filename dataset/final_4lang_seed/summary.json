@@ -1,40 +1,28 @@
 {
-  "target_total_unique_groups": 1250,
-  "actual_total_unique_groups": 1250,
+  "target_total_unique_groups": 300,
+  "actual_total_unique_groups": 300,
   "source_languages": [
     "English",
     "Hindi"
   ],
-  "target_total_source_rows": 2500,
-  "actual_total_source_rows": 2500,
+  "target_total_source_rows": 600,
+  "actual_total_source_rows": 600,
   "category_group_counts": {
-    "chrono_questions": 196,
-    "factual_questions": 390,
-    "indian_questions": 227,
-    "maths_questions": 175,
-    "reasoning_questions": 141,
-    "true_false_questions": 121
+    "chrono_questions": 100,
+    "factual_questions": 100,
+    "indian_questions": 100
   },
   "category_language_row_counts": {
-    "chrono_questions::English": 196,
-    "chrono_questions::Hindi": 196,
-    "factual_questions::English": 390,
-    "factual_questions::Hindi": 390,
-    "indian_questions::English": 227,
-    "indian_questions::Hindi": 227,
-    "maths_questions::English": 175,
-    "maths_questions::Hindi": 175,
-    "reasoning_questions::English": 141,
-    "reasoning_questions::Hindi": 141,
-    "true_false_questions::English": 121,
-    "true_false_questions::Hindi": 121
+    "chrono_questions::English": 100,
+    "chrono_questions::Hindi": 100,
+    "factual_questions::English": 100,
+    "factual_questions::Hindi": 100,
+    "indian_questions::English": 100,
+    "indian_questions::Hindi": 100
   },
   "selection_quotas": {
-    "factual_questions": 390,
-    "chrono_questions": 196,
-    "indian_questions": 227,
-    "maths_questions": 175,
-    "reasoning_questions": 141,
-    "true_false_questions": 121
+    "chrono_questions": 100,
+    "factual_questions": 100,
+    "indian_questions": 100
   }
 }

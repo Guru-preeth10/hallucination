@@ -1,0 +1,20 @@
+{
+  "total_rows": 600,
+  "total_unique_groups": 150,
+  "languages": [
+    "English",
+    "Hindi",
+    "Kannada",
+    "Tamil"
+  ],
+  "category_counts": {
+    "chrono_questions": 400,
+    "indian_questions": 200
+  },
+  "language_counts": {
+    "English": 150,
+    "Hindi": 150,
+    "Kannada": 150,
+    "Tamil": 150
+  }
+}

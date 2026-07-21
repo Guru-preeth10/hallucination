@@ -37,6 +37,12 @@ SAFE_CATEGORY_QUOTAS: Dict[str, int] = {
 SOURCE_LANGUAGES = ("English", "Hindi")
 
 
+def build_quotas(selected_categories: Iterable[str], max_groups_per_category: int | None) -> Dict[str, int]:
+    if max_groups_per_category is None:
+        return {category: SAFE_CATEGORY_QUOTAS[category] for category in selected_categories}
+    return {category: max_groups_per_category for category in selected_categories}
+
+
 def load_rows(path: Path) -> List[Dict]:
     rows: List[Dict] = []
     with open(path, "r", encoding="utf-8") as handle:
@@ -160,6 +166,17 @@ def parse_args() -> argparse.Namespace:
         default="dataset/final_4lang_seed",
         help="Directory where subset artifacts will be written.",
     )
+    parser.add_argument(
+        "--categories",
+        default=",".join(SAFE_CATEGORY_QUOTAS.keys()),
+        help="Comma-separated list of categories to include, e.g. chrono_questions,factual_questions,indian_questions",
+    )
+    parser.add_argument(
+        "--max-groups-per-category",
+        type=int,
+        default=None,
+        help="Optional cap for how many groups to select from each category.",
+    )
     return parser.parse_args()
 
 
@@ -171,9 +188,19 @@ def main() -> None:
 
     rows = load_rows(input_path)
     grouped_rows = build_group_index(rows)
+
+    selected_categories = [cat.strip() for cat in args.categories.split(",") if cat.strip()]
+    if not selected_categories:
+        raise ValueError("At least one category must be provided.")
+
+    quotas = build_quotas(selected_categories, args.max_groups_per_category)
+    for category in selected_categories:
+        if category not in SAFE_CATEGORY_QUOTAS:
+            raise ValueError(f"Unsupported category: {category}")
+
     selected_groups = select_groups(
         grouped_rows=grouped_rows,
-        quotas=SAFE_CATEGORY_QUOTAS,
+        quotas=quotas,
         required_languages=SOURCE_LANGUAGES,
     )
     subset_rows = build_source_subset_rows(
@@ -196,7 +223,7 @@ def main() -> None:
         selected_groups=selected_groups,
         subset_rows=subset_rows,
         source_languages=SOURCE_LANGUAGES,
-        quotas=SAFE_CATEGORY_QUOTAS,
+        quotas=quotas,
     )
 
     print(f"Selected groups: {len(selected_groups)}")
