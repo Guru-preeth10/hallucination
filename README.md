@@ -16,7 +16,9 @@ tasks. We evaluate 14 state-of-the-art multilingual LLMs on a benchmark subset o
 models, scales, categories, and domains using category-specific metrics normalized to (0,1)
 range. Aggregation over all categories and models yields a primary score of 0.23 and
 a language-corrected fuzzy score of 0.385, demonstrating the usefulness of BHRAM-IL
-for hallucination-focused evaluation. 
+for hallucination-focused evaluation.The benchmark provides valuable insights into the reliability and
+limitations of multilingual LLMs in handling Indian languages. It also establishes a foundation for
+developing more accurate, trustworthy, and language-aware AI systems.
 
 Also available on [HuggingFace](https://huggingface.co/datasets/sambhashana/BHRAM-IL/),
 
