@@ -18,7 +18,7 @@ range. Aggregation over all categories and models yields a primary score of 0.23
 a language-corrected fuzzy score of 0.385, demonstrating the usefulness of BHRAM-IL
 for hallucination-focused evaluation. 
 
-Also available on [HuggingFace](https://huggingface.co/datasets/sambhashana/BHRAM-IL/).
+Also available on [HuggingFace](https://huggingface.co/datasets/sambhashana/BHRAM-IL/),
 
 ## Structure
 
